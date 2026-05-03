@@ -1,0 +1,3 @@
+### CORE
+
+Ini buat Logicnya
