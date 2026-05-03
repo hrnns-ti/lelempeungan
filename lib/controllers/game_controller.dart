@@ -1,44 +1,37 @@
 import 'dart:isolate';
+import 'dart:math';
 import '../models/board_state.dart';
 import '../core/minimax.dart';
 
 class GameController {
   BoardState board = BoardState();
-  MinimaxEngine engine = MinimaxEngine();
 
-  void humanPlay(Move move) {
-    board.makeMove(move);
-    if (!board.isGameOver()) {
-      playBotTurn();
-    }
-  }
+  Future<void> botTurn ({int depth = 1, double errorChance = 0.0}) async {
+    if (board.isGameOver()) return;
 
-  // Ini fungsi asinkron (berjalan di background)
-  Future<void> playBotTurn() async {
-    print("Bot sedang berpikir...");
+    BoardState cloneBoard = _cloneBoard(board);
 
-    // Isolate gak boleh memori yang sama dengan Main Thread (biar gk freeze cuyy)
-    BoardState clonedBoard = _cloneBoard(board);
-
-    // Pindahin proses berat ke Isolate
     Move bestMove = await Isolate.run(() {
-      MinimaxEngine backgroundEngine = MinimaxEngine();
-      // Misal kita set kedalaman (depth) = 5
-      return backgroundEngine.getBestMove(clonedBoard, 3); 
+      final random = Random();
+
+      if (random.nextDouble() < errorChance) {
+        List<Move> validMoves = cloneBoard.getValidMoves();
+        if (validMoves.isNotEmpty) {
+          validMoves.shuffle();
+          return validMoves.first;
+        }
+      }
+
+      final engine = MinimaxEngine();
+      return engine.getBestMove(cloneBoard, depth);
     });
-
-    // Isolate selesai terus kirim jawaban (bestMove),
     board.makeMove(bestMove);
-
-    print("Bot menaruh bidak di index: ${bestMove.toIndex}");
   }
-
-  // Fungsi bantuan buat nyetak kembaran papan
-  BoardState _cloneBoard(BoardState currentBoard) {
+  BoardState _cloneBoard(BoardState board) {
     return BoardState(
-      initialGrid: List.from(currentBoard.grid),
-      currentPlayer: currentBoard.currentPlayer,
-      turnCount: currentBoard.turnCount,
+      initialGrid: List.from(board.grid),
+      currentPlayer: board.currentPlayer,
+      turnCount: board.turnCount,
     );
   }
 }

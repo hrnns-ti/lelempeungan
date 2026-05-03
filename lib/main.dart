@@ -13,7 +13,11 @@ class LelempeunganApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      theme: ThemeData(useMaterial3: true, colorSchemeSeed: Colors.blue),
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        useMaterial3: true,
+        colorSchemeSeed: Colors.blue,
+      ),
       home: const GameScreen(),
     );
   }
@@ -30,7 +34,16 @@ class _GameScreenState extends State<GameScreen> {
   late GameController _controller;
   int? _selectedFromIndex;
   bool _isBotThinking = false;
-  int _botPlayerId = 0; // Bot bisa jadi 1 atau 2
+  int _botPlayerId = 0; // 0 berarti belum diinisialisasi
+  int _currentLevel = 1;
+
+  // Konfigurasi Level sesuai permintaanmu
+  final Map<int, Map<String, dynamic>> _levelConfig = {
+    1: {'depth': 1, 'error': 0.40},
+    2: {'depth': 2, 'error': 0.25},
+    3: {'depth': 2, 'error': 0.0},
+    4: {'depth': 3, 'error': 0.1},
+  };
 
   @override
   void initState() {
@@ -42,13 +55,15 @@ class _GameScreenState extends State<GameScreen> {
     _controller = GameController();
     _selectedFromIndex = null;
     _isBotThinking = false;
-    
-    // Randomizer: Tentukan bot jadi player 1 atau 2
+
+    // Randomizer: Bot bisa jadi player 1 atau 2
     _botPlayerId = Random().nextBool() ? 1 : 2;
 
-    // Jika bot dapat giliran pertama (Player 1), langsung jalan
+    // Jika bot dapat giliran pertama, langsung jalan setelah build selesai
     if (_botPlayerId == 1) {
-      _triggerBotTurn();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _triggerBotTurn();
+      });
     }
   }
 
@@ -56,58 +71,82 @@ class _GameScreenState extends State<GameScreen> {
     if (_controller.board.isGameOver()) return;
 
     setState(() => _isBotThinking = true);
-    await _controller.playBotTurn();
+
+    // Ambil config berdasarkan level yang dipilih
+    final config = _levelConfig[_currentLevel]!;
+
+    // Panggil fungsi botTurn yang sudah fleksibel di GameController
+    await _controller.botTurn(
+      depth: config['depth'],
+      errorChance: config['error'],
+    );
+
     setState(() => _isBotThinking = false);
   }
 
   void _handleTap(int index) async {
-  final board = _controller.board;
+    final board = _controller.board;
 
-  if (board.isGameOver() || board.currentPlayer == _botPlayerId || _isBotThinking) return;
+    // Proteksi: Jangan bisa klik jika game beres, giliran bot, atau bot lagi mikir
+    if (board.isGameOver() || board.currentPlayer == _botPlayerId || _isBotThinking) return;
 
-  bool moveSuccessful = false;
-  Move? move;
+    bool moveSuccessful = false;
+    Move? move;
 
-  // FASE 1: Taruh Bidak
-  if (board.turnCount < 6) {
+    // FASE 1: Menaruh Bidak (Hingga 6 bidak di papan)
+    if (board.turnCount < 6) {
     if (board.grid[index] == 0) {
       move = Move(toIndex: index);
       moveSuccessful = true;
     }
-  } 
-  // FASE 2: Geser Bidak
-  else {
-    // Jika klik bidak sendiri, simpan sebagai 'asal'
+    }
+    // FASE 2: Menggeser Bidak
+    else {
     if (board.grid[index] == board.currentPlayer) {
+      // Pilih bidak milik sendiri
       setState(() => _selectedFromIndex = index);
-      return; // Berhenti di sini, tunggu klik tujuan
-    } 
-    
-    // Jika sudah pilih asal, dan klik kotak kosong
+      return;
+    }
     else if (_selectedFromIndex != null && board.grid[index] == 0) {
-      // Validasi apakah kotak tujuan bertetangga dengan asal[cite: 2]
+      // Cek koneksi titik (adjacency)
       List<int>? neighbors = BoardState.adjacentNodes[_selectedFromIndex!];
       if (neighbors != null && neighbors.contains(index)) {
         move = Move(fromIndex: _selectedFromIndex, toIndex: index);
         moveSuccessful = true;
       } else {
-        // Jika klik tempat yang tidak terhubung, batalkan pilihan
+        // Klik luar jangkauan, batalkan seleksi
         setState(() => _selectedFromIndex = null);
+      }
+    }
+    }
+
+    if (moveSuccessful && move != null) {
+      setState(() {
+        _controller.board.makeMove(move!);
+        _selectedFromIndex = null;
+      });
+
+      // Jika game belum beres, giliran bot otomatis jalan
+      if (!board.isGameOver()) {
+        await _triggerBotTurn();
       }
     }
   }
 
-  if (moveSuccessful && move != null) {
-    setState(() {
-      _controller.board.makeMove(move!);
-      _selectedFromIndex = null; // Selalu reset setelah move sukses
-    });
-
-    if (!board.isGameOver()) {
-      await _triggerBotTurn();
-    }
+  Widget _buildLevelSelector() {
+    return SegmentedButton<int>(
+      segments: const [
+        ButtonSegment(value: 1, label: Text('Lvl 1')),
+        ButtonSegment(value: 2, label: Text('Lvl 2')),
+        ButtonSegment(value: 3, label: Text('Lvl 3')),
+        ButtonSegment(value: 4, label: Text('Lvl 4')),
+      ],
+      selected: {_currentLevel},
+      onSelectionChanged: (newSelection) {
+        setState(() => _currentLevel = newSelection.first);
+      },
+    );
   }
-}
 
   @override
   Widget build(BuildContext context) {
@@ -117,7 +156,7 @@ class _GameScreenState extends State<GameScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Lelempeungan Test"),
+        title: const Text("Lelempeungan Engine Test"),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -125,34 +164,37 @@ class _GameScreenState extends State<GameScreen> {
           )
         ],
       ),
-      body: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            "Kamu: Player ${(_botPlayerId == 1 ? 2 : 1)} | Bot: Player $_botPlayerId",
-            style: const TextStyle(fontSize: 14, color: Colors.grey),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            winner != 0 
-                ? "PEMENANG: PLAYER $winner" 
-                : (isHumanTurn ? "Giliran Kamu!" : "Bot sedang berpikir..."),
-            style: TextStyle(
-              fontSize: 22, 
-              fontWeight: FontWeight.bold,
-              color: winner != 0 ? Colors.green : (isHumanTurn ? Colors.blue : Colors.red),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _buildLevelSelector(),
+            const SizedBox(height: 20),
+            Text(
+              "Kamu: Player ${(_botPlayerId == 1 ? 2 : 1)} | Bot: Player $_botPlayerId",
+              style: const TextStyle(fontSize: 14, color: Colors.grey),
             ),
-          ),
-          const SizedBox(height: 30),
-          Center(
-            child: Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Colors.brown[50],
-                borderRadius: BorderRadius.circular(15),
+            const SizedBox(height: 10),
+            Text(
+              winner != 0
+                  ? "WINNER: PLAYER $winner"
+                  : (isHumanTurn ? "Giliran Kamu!" : "Bot sedang berpikir..."),
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: winner != 0 ? Colors.green : (isHumanTurn ? Colors.blue : Colors.red),
               ),
-              width: 320,
-              height: 320,
+            ),
+            const SizedBox(height: 30),
+            // Board Container
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey[200],
+                borderRadius: BorderRadius.circular(20),
+              ),
+              width: 340,
+              height: 340,
               child: GridView.builder(
                 physics: const NeverScrollableScrollPhysics(),
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 3),
@@ -164,43 +206,42 @@ class _GameScreenState extends State<GameScreen> {
                   return GestureDetector(
                     onTap: () => _handleTap(index),
                     child: Container(
-                      margin: const EdgeInsets.all(5),
+                      margin: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: isSelected ? Colors.orange : Colors.black12, 
+                          color: isSelected ? Colors.orange : Colors.black12,
                           width: isSelected ? 4 : 1,
                         ),
-                        boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 2)],
                       ),
                       child: Center(
-                        child: cellValue == 0 
+                        child: cellValue == 0
                             ? (board.turnCount >= 6 ? null : const Icon(Icons.add, color: Colors.black12))
                             : Container(
-                                width: 40,
-                                height: 40,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: cellValue == 1 ? Colors.blue : Colors.red,
-                                  border: Border.all(color: Colors.white, width: 2),
-                                ),
-                              ),
+                          width: 45,
+                          height: 45,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: cellValue == 1 ? Colors.blue : Colors.red,
+                            boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 4)],
+                          ),
+                        ),
                       ),
                     ),
                   );
                 },
               ),
             ),
-          ),
-          const SizedBox(height: 40),
-          if (winner != 0)
-            ElevatedButton.icon(
-              onPressed: () => setState(() => _initializeGame()),
-              icon: const Icon(Icons.play_arrow),
-              label: const Text("Main Lagi"),
-            ),
-        ],
+            const SizedBox(height: 30),
+            if (winner != 0)
+              FilledButton.icon(
+                onPressed: () => setState(() => _initializeGame()),
+                icon: const Icon(Icons.replay),
+                label: const Text("Main Lagi"),
+              ),
+          ],
+        ),
       ),
     );
   }
