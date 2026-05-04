@@ -55,7 +55,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
               _isMusicOn,
               (val) => setState(() => _isMusicOn = val),
             ),
-
+            
             const SizedBox(height: 10),
 
             // Pengaturan Efek Suara
@@ -72,11 +72,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                _buildDialogButton(
-                  "KEMBALI",
-                  Colors.grey,
-                  () => Navigator.pop(context),
-                ),
+                _buildDialogButton("KEMBALI", Colors.grey, () => Navigator.pop(context)),
                 _buildDialogButton("SIMPAN", Colors.green, () {
                   // Tambahkan logika simpan ke local storage di sini
                   Navigator.pop(context);
@@ -89,12 +85,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
     );
   }
 
-  Widget _buildSettingRow(
-    String title,
-    IconData icon,
-    bool value,
-    Function(bool) onChanged,
-  ) {
+  Widget _buildSettingRow(String title, IconData icon, bool value, Function(bool) onChanged) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -102,10 +93,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
           children: [
             Icon(icon, color: AppColors.textTitle, size: 24),
             const SizedBox(width: 15),
-            Text(
-              title,
-              style: const TextStyle(color: Colors.white, fontSize: 18),
-            ),
+            Text(title, style: const TextStyle(color: Colors.white, fontSize: 18)),
           ],
         ),
         Switch(
@@ -131,10 +119,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
       ),
       child: Text(
         label,
-        style: const TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-        ),
+        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
       ),
     );
   }
