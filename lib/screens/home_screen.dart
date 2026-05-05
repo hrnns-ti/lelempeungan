@@ -4,6 +4,7 @@ import '../widgets/custom_button.dart';
 import '../widgets/settingan.dart';
 import 'pvp_setup_screen.dart';
 import 'bot_setup_screen.dart';
+import 'adventure_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -115,7 +116,12 @@ class HomeScreen extends StatelessWidget {
                                   color: Colors.orangeAccent,
                                   size: 30,
                                 ),
-                                onTap: () => print("Adventure Mode Selected"),
+                                onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const AdventureScreen(),
+                                  ),
+                                ),
                               ),
 
                               // Mendorong Bottom Bar ke bawah tanpa menyebabkan overflow
