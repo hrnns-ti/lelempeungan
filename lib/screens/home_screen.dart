@@ -1,30 +1,110 @@
 import 'package:flutter/material.dart';
+
 import '../constants/app_colors.dart';
+import '../services/game_audio.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/settingan.dart';
-import 'pvp_setup_screen.dart';
-import 'bot_setup_screen.dart';
 import 'adventure_screen.dart';
+import 'bot_setup_screen.dart';
+import 'pvp_setup_screen.dart';
+import '../widgets/player_profile_dialog.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+
+    // Musik dimulai dari HomeScreen.
+    // Tidak perlu dipanggil ulang di setiap screen.
+    GameAudio.playBgm();
+  }
+
+  Future<void> _goToLocalMatch() async {
+    GameAudio.playClick();
+
+    if (!mounted) return;
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const PvpSetupScreen(),
+      ),
+    );
+  }
+
+  Future<void> _goToBotSetup() async {
+    GameAudio.playClick();
+
+    if (!mounted) return;
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const BotSetupScreen(),
+      ),
+    );
+  }
+
+  Future<void> _goToAdventure() async {
+    GameAudio.playClick();
+
+    if (!mounted) return;
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const AdventureScreen(),
+      ),
+    );
+  }
+
+  Future<void> _openSettings() async {
+    GameAudio.playClick();
+
+    if (!mounted) return;
+
+    await showDialog(
+      context: context,
+      builder: (context) => const SettingsDialog(),
+    );
+
+    if (!mounted) return;
+
+    setState(() {});
+  }
+
+  Future<void> _openProfile() async {
+    GameAudio.playClick();
+
+    if (!mounted) return;
+
+    await showDialog(
+      context: context,
+      builder: (context) => const PlayerProfileDialog(),
+    );
+
+    if (!mounted) return;
+
+    setState(() {});
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Center(
         child: Container(
-          // Membatasi lebar agar tetap estetik di Web/Desktop (Hybrid)
           constraints: const BoxConstraints(maxWidth: 500),
           child: Stack(
             children: [
-              // 1. Background Bergaris (Base Layer)
               _buildBackgroundStripes(),
-
-              // 2. Elemen Dekoratif Awan (Sesuai Figma)
               _buildDecorativeClouds(),
-
-              // 3. Konten Utama yang bisa di-scroll
               SafeArea(
                 child: LayoutBuilder(
                   builder: (context, constraints) {
@@ -38,7 +118,7 @@ class HomeScreen extends StatelessWidget {
                           child: Column(
                             children: [
                               const SizedBox(height: 30),
-                              // Header: Ikon Atap & Judul
+
                               const Icon(
                                 Icons.temple_hindu_outlined,
                                 color: AppColors.textTitle,
@@ -46,7 +126,7 @@ class HomeScreen extends StatelessWidget {
                               ),
                               const SizedBox(height: 5),
                               const Text(
-                                "LELEMPEUNGAN",
+                                'LELEMPEUNGAN',
                                 style: TextStyle(
                                   color: AppColors.textTitle,
                                   fontSize: 34,
@@ -56,7 +136,7 @@ class HomeScreen extends StatelessWidget {
                               ),
                               _buildDivider(),
                               const Text(
-                                "Local Culture Of Sunda",
+                                'Local Culture Of Sunda',
                                 style: TextStyle(
                                   color: AppColors.textTitle,
                                   fontSize: 11,
@@ -65,70 +145,51 @@ class HomeScreen extends StatelessWidget {
                               ),
 
                               const SizedBox(height: 40),
-                              // Placeholder Gambar Karakter (Mockup Tengah)
+
                               const Icon(
                                 Icons.groups_outlined,
                                 color: AppColors.frameColor,
                                 size: 130,
                               ),
+
                               const SizedBox(height: 40),
 
-                              // Daftar Tombol Menu
                               CustomButton(
-                                title: "Local Match",
-                                subtitle: "(Player vs Player)",
+                                title: 'Local Match',
+                                subtitle: '(Player vs Player)',
                                 icon: const Icon(
                                   Icons.radio_button_checked,
                                   color: Colors.red,
                                   size: 35,
                                 ),
-                                onTap: () => Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        const PvpSetupScreen(),
-                                  ),
-                                ),
+                                onTap: _goToLocalMatch,
                               ),
 
                               CustomButton(
-                                title: "v. AI",
-                                subtitle: "Challenge The Bot Akang Greg",
+                                title: 'v. AI',
+                                subtitle: 'Challenge The Bot Akang Greg',
                                 icon: const Icon(
                                   Icons.smart_toy_outlined,
                                   color: AppColors.textTitle,
                                   size: 35,
                                 ),
-                                onTap: () => Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        const BotSetupScreen(),
-                                  ),
-                                ),
+                                onTap: _goToBotSetup,
                               ),
 
                               CustomButton(
-                                title: "Lelempeungan Adventure",
-                                subtitle: "Story Mode",
+                                title: 'Lelempeungan Adventure',
+                                subtitle: 'Story Mode',
                                 icon: const Icon(
                                   Icons.menu_book,
                                   color: Colors.orangeAccent,
                                   size: 30,
                                 ),
-                                onTap: () => Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => const AdventureScreen(),
-                                  ),
-                                ),
+                                onTap: _goToAdventure,
                               ),
 
-                              // Mendorong Bottom Bar ke bawah tanpa menyebabkan overflow
                               const Spacer(),
 
-                              // 4. Bottom Navigation Berfungsi
-                              _buildFunctionalBottomNav(context),
+                              _buildBottomNav(),
                               const SizedBox(height: 20),
                             ],
                           ),
@@ -158,22 +219,34 @@ class HomeScreen extends StatelessWidget {
   }
 
   Widget _buildDecorativeClouds() {
-    return Stack(
-      children: const [
+    return const Stack(
+      children: [
         Positioned(
           top: 60,
           left: -20,
-          child: Icon(Icons.cloud_queue, color: Colors.white24, size: 80),
+          child: Icon(
+            Icons.cloud_queue,
+            color: Colors.white24,
+            size: 80,
+          ),
         ),
         Positioned(
           top: 150,
           right: -10,
-          child: Icon(Icons.cloud_queue, color: Colors.white24, size: 100),
+          child: Icon(
+            Icons.cloud_queue,
+            color: Colors.white24,
+            size: 100,
+          ),
         ),
         Positioned(
           top: 400,
           left: -30,
-          child: Icon(Icons.cloud_queue, color: Colors.white10, size: 120),
+          child: Icon(
+            Icons.cloud_queue,
+            color: Colors.white10,
+            size: 120,
+          ),
         ),
       ],
     );
@@ -187,41 +260,27 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildFunctionalBottomNav(BuildContext context) {
+  Widget _buildBottomNav() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 70, vertical: 10),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
           IconButton(
             icon: const Icon(
-              Icons.volume_up_outlined,
-              color: AppColors.textTitle,
-              size: 35,
-            ),
-            onPressed: () => print("Mute/Unmute Suara"),
-          ),
-          IconButton(
-            icon: const Icon(
               Icons.account_circle_outlined,
               color: AppColors.textTitle,
-              size: 40,
+              size: 42,
             ),
-            onPressed: () => print("Buka Profil Player"),
+            onPressed: _openProfile,
           ),
           IconButton(
             icon: const Icon(
               Icons.settings_outlined,
               color: AppColors.textTitle,
-              size: 35,
+              size: 38,
             ),
-            onPressed: () {
-              // Memunculkan pop-up settings yang sudah kita buat sebelumnya
-              showDialog(
-                context: context,
-                builder: (context) => const SettingsDialog(),
-              );
-            },
+            onPressed: _openSettings,
           ),
         ],
       ),

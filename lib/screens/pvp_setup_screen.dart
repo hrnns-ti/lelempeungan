@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../constants/app_colors.dart';
 import 'local_match_screen.dart';
+import '../services/game_audio.dart';
 
 class PvpSetupScreen extends StatefulWidget {
   const PvpSetupScreen({super.key});
@@ -551,6 +552,7 @@ class _PressableGameButtonState extends State<_PressableGameButton> {
 
   void _handleTap() {
     HapticFeedback.lightImpact();
+    GameAudio.playClick();
     widget.onTap();
   }
 

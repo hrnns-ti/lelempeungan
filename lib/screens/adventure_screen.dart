@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../constants/app_colors.dart';
+import '../services/game_audio.dart';
 import 'adventure_story_screen.dart';
 
 class AdventureScreen extends StatefulWidget {
@@ -124,13 +125,14 @@ class _AdventureScreenState extends State<AdventureScreen> {
 
   void _onChapterTap(int index) {
     HapticFeedback.selectionClick();
+    GameAudio.playClick();
 
     final chapter = _chapters[index];
 
     if (!chapter.unlocked) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Chapter ini masih terkunci.'),
+          content: Text('This chapter still locked.'),
           backgroundColor: Color(0xFF7A4A2B),
           behavior: SnackBarBehavior.floating,
           duration: Duration(seconds: 2),
@@ -654,7 +656,11 @@ class _StartAdventureButtonState extends State<_StartAdventureButton> {
       onTapDown: (_) => _setPressed(true),
       onTapUp: (_) => _setPressed(false),
       onTapCancel: () => _setPressed(false),
-      onTap: widget.onTap,
+      onTap: () {
+        HapticFeedback.lightImpact();
+        GameAudio.playClick();
+        widget.onTap();
+      },
       child: AnimatedScale(
         scale: _pressed ? 0.96 : 1,
         duration: const Duration(milliseconds: 90),
@@ -838,7 +844,11 @@ class _BackButtonCircle extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       borderRadius: BorderRadius.circular(999),
-      onTap: onTap,
+      onTap: () {
+        HapticFeedback.lightImpact();
+        GameAudio.playClick();
+        onTap();
+      },
       child: Ink(
         width: 34,
         height: 34,

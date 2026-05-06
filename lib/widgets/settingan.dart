@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import '../constants/app_colors.dart';
+import 'package:flutter/services.dart';
+
+import '../services/game_audio.dart';
 
 class SettingsDialog extends StatefulWidget {
   const SettingsDialog({super.key});
@@ -9,118 +11,258 @@ class SettingsDialog extends StatefulWidget {
 }
 
 class _SettingsDialogState extends State<SettingsDialog> {
-  // State untuk switch suara, bisa dihubungkan ke provider nanti
-  bool _isMusicOn = true;
-  bool _isSoundOn = true;
+  bool get _musicOn => GameAudio.isMusicEnabled;
+  bool get _soundOn => GameAudio.isSoundEnabled;
+
+  Future<void> _toggleMusic(bool value) async {
+    await GameAudio.playClick();
+    await GameAudio.setMusicEnabled(value);
+
+    if (!mounted) return;
+    setState(() {});
+  }
+
+  Future<void> _toggleSound(bool value) async {
+    if (value) {
+      await GameAudio.setSoundEnabled(true);
+      await GameAudio.playClick();
+    } else {
+      await GameAudio.playClick();
+      await GameAudio.setSoundEnabled(false);
+    }
+
+    if (!mounted) return;
+    setState(() {});
+  }
+
+  Future<void> _closeDialog() async {
+    await GameAudio.playClick();
+
+    if (!mounted) return;
+    Navigator.of(context).pop();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      backgroundColor: Colors.transparent, // Agar border buatan kita terlihat
+      backgroundColor: Colors.transparent,
       child: Container(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
         decoration: BoxDecoration(
-          color: AppColors.buttonBg, // Cokelat medium sesuai tombol
-          borderRadius: BorderRadius.circular(30),
-          border: Border.all(color: AppColors.buttonBorder, width: 4),
-          boxShadow: [
+          color: const Color(0xFFC28B57),
+          borderRadius: BorderRadius.circular(26),
+          border: Border.all(
+            color: const Color(0xFFE0B36E),
+            width: 4,
+          ),
+          boxShadow: const [
             BoxShadow(
-              color: Colors.black.withOpacity(0.5),
-              blurRadius: 10,
-              offset: const Offset(0, 5),
+              color: Colors.black38,
+              blurRadius: 16,
+              offset: Offset(0, 8),
             ),
           ],
         ),
         child: Column(
-          mainAxisSize: MainAxisSize.min, // Dialog hanya setinggi kontennya
+          mainAxisSize: MainAxisSize.min,
           children: [
-            // Header Dialog
-            const Text(
-              "PENGATURAN",
-              style: TextStyle(
-                color: AppColors.textTitle,
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 3,
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 22,
+                vertical: 10,
+              ),
+              decoration: BoxDecoration(
+                color: const Color(0xFF8F5B3A),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Colors.black26,
+                    blurRadius: 5,
+                    offset: Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: const Text(
+                'Settings',
+                style: TextStyle(
+                  color: Color(0xFFF8E8D2),
+                  fontSize: 24,
+                  fontWeight: FontWeight.w900,
+                ),
               ),
             ),
-            const SizedBox(height: 10),
-            Container(height: 1, color: AppColors.textTitle.withOpacity(0.3)),
-            const SizedBox(height: 20),
 
-            // Pengaturan Musik
-            _buildSettingRow(
-              "Musik",
-              Icons.music_note,
-              _isMusicOn,
-              (val) => setState(() => _isMusicOn = val),
-            ),
-            
-            const SizedBox(height: 10),
+            const SizedBox(height: 22),
 
-            // Pengaturan Efek Suara
-            _buildSettingRow(
-              "Efek Suara",
-              Icons.volume_up,
-              _isSoundOn,
-              (val) => setState(() => _isSoundOn = val),
+            _SettingTile(
+              icon: _musicOn ? Icons.music_note : Icons.music_off,
+              title: 'Music',
+              value: _musicOn,
+              onChanged: _toggleMusic,
             ),
 
-            const SizedBox(height: 30),
+            const SizedBox(height: 14),
 
-            // Tombol Aksi
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _buildDialogButton("KEMBALI", Colors.grey, () => Navigator.pop(context)),
-                _buildDialogButton("SIMPAN", Colors.green, () {
-                  // Tambahkan logika simpan ke local storage di sini
-                  Navigator.pop(context);
-                }),
-              ],
+            _SettingTile(
+              icon: _soundOn ? Icons.volume_up : Icons.volume_off,
+              title: 'Sound Effect',
+              value: _soundOn,
+              onChanged: _toggleSound,
+            ),
+
+            const SizedBox(height: 24),
+
+            _DialogButton(
+              label: 'CLOSE',
+              icon: Icons.close,
+              color: const Color(0xFF6A3927),
+              onTap: _closeDialog,
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildSettingRow(String title, IconData icon, bool value, Function(bool) onChanged) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Row(
-          children: [
-            Icon(icon, color: AppColors.textTitle, size: 24),
-            const SizedBox(width: 15),
-            Text(title, style: const TextStyle(color: Colors.white, fontSize: 18)),
-          ],
-        ),
-        Switch(
-          value: value,
-          onChanged: onChanged,
-          activeColor: Colors.orangeAccent,
-          activeTrackColor: AppColors.stripe3, // Pakai warna hijau tengah
-        ),
-      ],
-    );
-  }
-
-  Widget _buildDialogButton(String label, Color color, VoidCallback onTap) {
-    return ElevatedButton(
-      onPressed: onTap,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: AppColors.buttonBorder,
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(15),
-          side: BorderSide(color: color, width: 2),
-        ),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
       ),
     );
   }
 }
+
+class _SettingTile extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  const _SettingTile({
+    required this.icon,
+    required this.title,
+    required this.value,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 8, 10, 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE7DDD0),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black26,
+            blurRadius: 6,
+            offset: Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Icon(
+            icon,
+            color: const Color(0xFF5E6C55),
+            size: 30,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              title,
+              style: const TextStyle(
+                color: Color(0xFF8A4F2C),
+                fontSize: 18,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+          Switch(
+            value: value,
+            activeThumbColor: const Color(0xFF6B7F4E),
+            activeTrackColor: const Color(0xFFBFD3A6),
+            onChanged: onChanged,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DialogButton extends StatefulWidget {
+  final String label;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _DialogButton({
+    required this.label,
+    required this.icon,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  State<_DialogButton> createState() => _DialogButtonState();
+}
+
+class _DialogButtonState extends State<_DialogButton> {
+  bool _isPressed = false;
+
+  void _setPressed(bool value) {
+    if (_isPressed == value) return;
+
+    setState(() {
+      _isPressed = value;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => _setPressed(true),
+      onTapUp: (_) => _setPressed(false),
+      onTapCancel: () => _setPressed(false),
+      onTap: () {
+        HapticFeedback.lightImpact();
+        widget.onTap();
+      },
+      child: AnimatedScale(
+        scale: _isPressed ? 0.94 : 1,
+        duration: const Duration(milliseconds: 90),
+        child: Container(
+          height: 58,
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: widget.color,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: const Color(0xFFE0B36E),
+              width: 1.4,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black26,
+                blurRadius: _isPressed ? 3 : 7,
+                offset: Offset(0, _isPressed ? 2 : 5),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                widget.icon,
+                color: const Color(0xFFF8E8D2),
+                size: 20,
+              ),
+              const SizedBox(height: 3),
+              Text(
+                widget.label,
+                style: const TextStyle(
+                  color: Color(0xFFF8E8D2),
+                  fontSize: 10,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+} 

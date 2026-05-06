@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import '../constants/app_colors.dart';
 import '../controllers/game_controller.dart';
 import '../models/board_state.dart';
+import '../services/game_audio.dart';
 
 class BotMatchScreen extends StatefulWidget {
   final String playerName;
@@ -38,6 +39,9 @@ class _BotMatchScreenState extends State<BotMatchScreen> {
 
   bool _isPaused = false;
   bool _botThinking = false;
+
+  bool get _musicOn => GameAudio.isMusicEnabled;
+  bool get _soundOn => GameAudio.isSoundEnabled;
 
   static const int _totalPiecesPerPlayer = 3;
 
@@ -87,6 +91,10 @@ class _BotMatchScreenState extends State<BotMatchScreen> {
     final minutes = (totalSeconds ~/ 60).toString().padLeft(2, '0');
     final seconds = (totalSeconds % 60).toString().padLeft(2, '0');
     return '$minutes:$seconds';
+  }
+
+  String get _bot {
+    return widget.botName;
   }
 
   String get _currentPlayerName {
@@ -146,10 +154,11 @@ class _BotMatchScreenState extends State<BotMatchScreen> {
     if (_botThinking) return;
 
     // Player manusia selalu player 1.
-    // Bot Akang GREG selalu player 2.
+    // Bot $_bot selalu player 2.
     if (_board.currentPlayer != 1) return;
 
     HapticFeedback.selectionClick();
+    GameAudio.playClick();
 
     if (_board.isPlacementPhase) {
       if (_board.grid[index] != 0) return;
@@ -235,7 +244,7 @@ class _BotMatchScreenState extends State<BotMatchScreen> {
     final validMoves = _board.getValidMoves();
 
     if (validMoves.isEmpty) {
-      _showSnackBar('Akang GREG tidak punya langkah.');
+      _showSnackBar('$_bot has no move.');
       return;
     }
 
@@ -250,6 +259,8 @@ class _BotMatchScreenState extends State<BotMatchScreen> {
       depth: widget.botDepth,
       errorChance: widget.botErrorChance,
     );
+
+    GameAudio.playClick();
 
     if (!mounted) return;
 
@@ -309,7 +320,7 @@ class _BotMatchScreenState extends State<BotMatchScreen> {
                 ),
                 const SizedBox(height: 12),
                 const Text(
-                  'Game Selesai',
+                  'Game Over',
                   style: TextStyle(
                     color: Color(0xFFF8E8D2),
                     fontSize: 24,
@@ -318,7 +329,7 @@ class _BotMatchScreenState extends State<BotMatchScreen> {
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  '$winnerName menang',
+                  '$winnerName Win',
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                     color: Colors.white,
@@ -373,100 +384,145 @@ class _BotMatchScreenState extends State<BotMatchScreen> {
       context: context,
       barrierColor: Colors.black54,
       builder: (dialogContext) {
-        return Dialog(
-          backgroundColor: Colors.transparent,
-          child: Container(
-            padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
-            decoration: BoxDecoration(
-              color: const Color(0xFFC28B57),
-              borderRadius: BorderRadius.circular(26),
-              border: Border.all(
-                color: const Color(0xFFE0B36E),
-                width: 4,
-              ),
-              boxShadow: const [
-                BoxShadow(
-                  color: Colors.black38,
-                  blurRadius: 16,
-                  offset: Offset(0, 8),
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 22,
-                    vertical: 10,
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return Dialog(
+              backgroundColor: Colors.transparent,
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFC28B57),
+                  borderRadius: BorderRadius.circular(26),
+                  border: Border.all(
+                    color: const Color(0xFFE0B36E),
+                    width: 4,
                   ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF8F5B3A),
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Colors.black26,
-                        blurRadius: 5,
-                        offset: Offset(0, 3),
-                      ),
-                    ],
-                  ),
-                  child: const Text(
-                    'Settings',
-                    style: TextStyle(
-                      color: Color(0xFFF8E8D2),
-                      fontSize: 24,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _DialogButton(
-                        label: 'HOME',
-                        icon: Icons.home,
-                        color: const Color(0xFF6A3927),
-                        onTap: () {
-                          Navigator.of(dialogContext).pop();
-                          Navigator.of(context).popUntil(
-                                (route) => route.isFirst,
-                          );
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: _DialogButton(
-                        label: 'RESUME',
-                        icon: Icons.play_arrow,
-                        color: const Color(0xFF6B7F4E),
-                        onTap: () {
-                          Navigator.of(dialogContext).pop();
-                          setState(() {
-                            _isPaused = false;
-                          });
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: _DialogButton(
-                        label: 'RESET',
-                        icon: Icons.refresh,
-                        color: const Color(0xFF8B4A29),
-                        onTap: () {
-                          Navigator.of(dialogContext).pop();
-                          _resetGame();
-                        },
-                      ),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Colors.black38,
+                      blurRadius: 16,
+                      offset: Offset(0, 8),
                     ),
                   ],
                 ),
-              ],
-            ),
-          ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 22,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF8F5B3A),
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Colors.black26,
+                            blurRadius: 5,
+                            offset: Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: const Text(
+                        'Settings',
+                        style: TextStyle(
+                          color: Color(0xFFF8E8D2),
+                          fontSize: 24,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 22),
+
+                    _SettingTile(
+                      icon: _musicOn ? Icons.music_note : Icons.music_off,
+                      title: 'Music',
+                      value: _musicOn,
+                      onChanged: (value) async {
+                        await GameAudio.playClick();
+                        await GameAudio.setMusicEnabled(value);
+
+                        if (!mounted) return;
+
+                        setState(() {});
+                        setDialogState(() {});
+                      },
+                    ),
+
+                    const SizedBox(height: 14),
+
+                    _SettingTile(
+                      icon: _soundOn ? Icons.volume_up : Icons.volume_off,
+                      title: 'Sound Effect',
+                      value: _soundOn,
+                      onChanged: (value) async {
+                        if (value) {
+                          await GameAudio.setSoundEnabled(true);
+                          await GameAudio.playClick();
+                        } else {
+                          await GameAudio.playClick();
+                          await GameAudio.setSoundEnabled(false);
+                        }
+
+                        if (!mounted) return;
+
+                        setState(() {});
+                        setDialogState(() {});
+                      },
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _DialogButton(
+                            label: 'HOME',
+                            icon: Icons.home,
+                            color: const Color(0xFF6A3927),
+                            onTap: () {
+                              Navigator.of(dialogContext).pop();
+                              Navigator.of(context).popUntil(
+                                (route) => route.isFirst,
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _DialogButton(
+                            label: 'RESUME',
+                            icon: Icons.play_arrow,
+                            color: const Color(0xFF6B7F4E),
+                            onTap: () {
+                              Navigator.of(dialogContext).pop();
+                              setState(() {
+                                _isPaused = false;
+                              });
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _DialogButton(
+                            label: 'RESET',
+                            icon: Icons.refresh,
+                            color: const Color(0xFF8B4A29),
+                            onTap: () {
+                              Navigator.of(dialogContext).pop();
+                              _resetGame();
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
         );
       },
     ).then((_) {
@@ -482,23 +538,23 @@ class _BotMatchScreenState extends State<BotMatchScreen> {
 
   void _showHint() {
     if (_botThinking) {
-      _showSnackBar('Akang GREG sedang berpikir...');
+      _showSnackBar('$_bot thinking...');
       return;
     }
 
     if (_board.currentPlayer == 2) {
-      _showSnackBar('Sekarang giliran Akang GREG.');
+      _showSnackBar("Now it's $_bot turns.");
       return;
     }
 
     String message;
 
     if (_board.isPlacementPhase) {
-      message = 'Pilih titik kosong untuk menaruh bidak $_currentPlayerName.';
+      message = 'Select an empty spot to place a piece. $_currentPlayerName.';
     } else if (_selectedIndex == null) {
-      message = 'Pilih salah satu bidak milik $_currentPlayerName.';
+      message = 'Select one of the pieces owned by $_currentPlayerName.';
     } else {
-      message = 'Pilih titik kosong yang terhubung dengan bidak terpilih.';
+      message = 'Select an empty point connected to the selected piece.';
     }
 
     _showSnackBar(message);
@@ -515,14 +571,14 @@ class _BotMatchScreenState extends State<BotMatchScreen> {
             borderRadius: BorderRadius.circular(24),
           ),
           title: const Text(
-            'Cara Bermain',
+            'How to Play',
             style: TextStyle(
               color: Color(0xFFF8E8D2),
               fontWeight: FontWeight.w900,
             ),
           ),
-          content: const Text(
-            'Kamu melawan Akang GREG. Kamu memiliki 3 bidak dan Akang GREG juga memiliki 3 bidak. Pada fase awal, pemain bergantian menaruh bidak di titik kosong. Setelah semua bidak diletakkan, pemain menggeser bidaknya ke titik yang terhubung. Pemain yang berhasil membuat 3 bidak sejajar akan menang.',
+          content: Text(
+            "You're playing against $_bot. You have three pieces, and $_bot also has three pieces. In the initial phase, players take turns placing pieces on empty points. Once all pieces have been placed, players move their pieces to the connected points. The player who successfully lines up three pieces wins.",
             style: TextStyle(
               color: Colors.white,
               height: 1.45,
@@ -531,6 +587,7 @@ class _BotMatchScreenState extends State<BotMatchScreen> {
           actions: [
             TextButton(
               onPressed: () {
+                GameAudio.playClick();
                 Navigator.of(dialogContext).pop();
               },
               child: const Text(
@@ -667,12 +724,12 @@ class _BotMatchScreenState extends State<BotMatchScreen> {
     String title;
 
     if (_botThinking) {
-      title = 'Akang GREG sedang berpikir...';
+      title = '$_bot thinking...';
     } else {
-      title = 'Giliran $_currentPlayerName';
+      title = '$_currentPlayerName Turn';
     }
 
-    final phaseText = _board.isPlacementPhase ? 'Taruh Bidak' : 'Geser Bidak';
+    final phaseText = _board.isPlacementPhase ? 'Place the piece' : 'Shift the pieces';
 
     return Container(
       width: double.infinity,
@@ -1383,6 +1440,7 @@ class _SettingsSquareButtonState extends State<_SettingsSquareButton> {
       onTapCancel: () => _setPressed(false),
       onTap: () {
         HapticFeedback.lightImpact();
+        GameAudio.playClick();
         widget.onTap();
       },
       child: AnimatedScale(
@@ -1449,6 +1507,7 @@ class _SmallRoundButtonState extends State<_SmallRoundButton> {
       onTapCancel: () => _setPressed(false),
       onTap: () {
         HapticFeedback.lightImpact();
+        GameAudio.playClick();
         widget.onTap();
       },
       child: AnimatedScale(
@@ -1513,7 +1572,11 @@ class _DialogButtonState extends State<_DialogButton> {
       onTapDown: (_) => _setPressed(true),
       onTapUp: (_) => _setPressed(false),
       onTapCancel: () => _setPressed(false),
-      onTap: widget.onTap,
+      onTap: () {
+        HapticFeedback.lightImpact();
+        GameAudio.playClick();
+        widget.onTap();
+      },
       child: AnimatedScale(
         scale: _isPressed ? 0.94 : 1,
         duration: const Duration(milliseconds: 90),
@@ -1553,3 +1616,62 @@ class _DialogButtonState extends State<_DialogButton> {
     );
   }
 }
+
+class _SettingTile extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  const _SettingTile({
+    required this.icon,
+    required this.title,
+    required this.value,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 8, 10, 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE7DDD0),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black26,
+            blurRadius: 6,
+            offset: Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Icon(
+            icon,
+            color: const Color(0xFF5E6C55),
+            size: 30,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              title,
+              style: const TextStyle(
+                color: Color(0xFF8A4F2C),
+                fontSize: 18,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+          Switch(
+            value: value,
+            activeThumbColor: const Color(0xFF6B7F4E),
+            activeTrackColor: const Color(0xFFBFD3A6),
+            onChanged: onChanged,
+          ),
+        ],
+      ),
+    );
+  }
+}
+

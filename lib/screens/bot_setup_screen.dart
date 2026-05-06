@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 
 import '../constants/app_colors.dart';
 import 'bot_match_screen.dart';
+import '../services/game_audio.dart';
+import '../services/player_profile_service.dart';
 
 class BotSetupScreen extends StatefulWidget {
   const BotSetupScreen({super.key});
@@ -57,15 +59,33 @@ class _BotSetupScreenState extends State<BotSetupScreen> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _loadPlayerProfile();
+  }
+
+  Future<void> _loadPlayerProfile() async {
+    final playerName = await PlayerProfileService.getPlayerName();
+
+    if (!mounted) return;
+
+    if (_nameController.text.trim().isEmpty) {
+      _nameController.text = playerName;
+    }
+  }
+  
+  @override
   void dispose() {
     _nameController.dispose();
     _nameFocusNode.dispose();
     super.dispose();
   }
 
+
   void _onStartGame() {
     FocusScope.of(context).unfocus();
     HapticFeedback.mediumImpact();
+    GameAudio.playClick();
 
     final playerName = _nameController.text.trim().isEmpty
         ? 'Player'
@@ -323,6 +343,7 @@ class _BotSetupScreenState extends State<BotSetupScreen> {
                                               selected: selected,
                                               onTap: () {
                                                 HapticFeedback.selectionClick();
+                                                GameAudio.playClick();
                                                 setState(() {
                                                   _selectedLevel = index;
                                                 });
@@ -520,7 +541,11 @@ class _BackButtonCircle extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       borderRadius: BorderRadius.circular(999),
-      onTap: onTap,
+      onTap: () {
+        HapticFeedback.lightImpact();
+        GameAudio.playClick();
+        onTap();
+      },
       child: Ink(
         width: 34,
         height: 34,

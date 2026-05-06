@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 
 import '../constants/app_colors.dart';
 import '../models/board_state.dart';
+import '../services/game_audio.dart';
 
 class LocalMatchScreen extends StatefulWidget {
   final String player1Name;
@@ -27,8 +28,8 @@ class _LocalMatchScreenState extends State<LocalMatchScreen> {
   int? _selectedIndex;
 
   bool _isPaused = false;
-  bool _musicOn = true;
-  bool _soundOn = true;
+  bool get _musicOn => GameAudio.isMusicEnabled;
+  bool get _soundOn => GameAudio.isSoundEnabled;
 
   static const int _totalPiecesPerPlayer = 3;
 
@@ -128,6 +129,7 @@ class _LocalMatchScreenState extends State<LocalMatchScreen> {
     if (_board.isGameOver()) return;
 
     HapticFeedback.selectionClick();
+    GameAudio.playClick();
 
     if (_board.isPlacementPhase) {
       if (_board.grid[index] != 0) return;
@@ -241,7 +243,7 @@ class _LocalMatchScreenState extends State<LocalMatchScreen> {
                 ),
                 const SizedBox(height: 12),
                 const Text(
-                  'Game Selesai',
+                  'Game Over',
                   style: TextStyle(
                     color: Color(0xFFF8E8D2),
                     fontSize: 24,
@@ -250,7 +252,7 @@ class _LocalMatchScreenState extends State<LocalMatchScreen> {
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  '$winnerName menang',
+                  '$winnerName Win',
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                     color: Colors.white,
@@ -356,25 +358,36 @@ class _LocalMatchScreenState extends State<LocalMatchScreen> {
                     ),
                     const SizedBox(height: 22),
                     _SettingTile(
-                      icon: Icons.music_note,
+                      icon: _musicOn ? Icons.music_note : Icons.music_off,
                       title: 'Music',
                       value: _musicOn,
-                      onChanged: (value) {
-                        setState(() {
-                          _musicOn = value;
-                        });
+                      onChanged: (value) async {
+                        await GameAudio.playClick();
+                        await GameAudio.setMusicEnabled(value);
+
+                        if (!mounted) return;
+
+                        setState(() {});
                         setDialogState(() {});
                       },
                     ),
                     const SizedBox(height: 14),
                     _SettingTile(
-                      icon: Icons.volume_up,
-                      title: 'Sound',
+                      icon: _soundOn ? Icons.volume_up : Icons.volume_off,
+                      title: 'Sound Effect',
                       value: _soundOn,
-                      onChanged: (value) {
-                        setState(() {
-                          _soundOn = value;
-                        });
+                      onChanged: (value) async {
+                        if (value) {
+                          await GameAudio.setSoundEnabled(true);
+                          await GameAudio.playClick();
+                        } else {
+                          await GameAudio.playClick();
+                          await GameAudio.setSoundEnabled(false);
+                        }
+
+                        if (!mounted) return;
+
+                        setState(() {});
                         setDialogState(() {});
                       },
                     ),
@@ -444,11 +457,11 @@ class _LocalMatchScreenState extends State<LocalMatchScreen> {
     String message;
 
     if (_board.isPlacementPhase) {
-      message = 'Pilih titik kosong untuk menaruh bidak $_currentPlayerName.';
+      message = 'Select an empty spot to place a piece. $_currentPlayerName.';
     } else if (_selectedIndex == null) {
-      message = 'Pilih salah satu bidak milik $_currentPlayerName.';
+      message = 'Select one of the pieces owned by $_currentPlayerName.';
     } else {
-      message = 'Pilih titik kosong yang terhubung dengan bidak terpilih.';
+      message = 'Select an empty point connected to the selected piece.';
     }
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -472,14 +485,14 @@ class _LocalMatchScreenState extends State<LocalMatchScreen> {
             borderRadius: BorderRadius.circular(24),
           ),
           title: const Text(
-            'Cara Bermain',
+            'How to Play',
             style: TextStyle(
               color: Color(0xFFF8E8D2),
               fontWeight: FontWeight.w900,
             ),
           ),
           content: const Text(
-            'Setiap pemain memiliki 3 bidak. Pada fase awal, pemain bergantian menaruh bidak di titik kosong. Setelah semua bidak diletakkan, pemain menggeser bidaknya ke titik yang terhubung. Pemain yang berhasil membuat 3 bidak sejajar akan menang.',
+            'Each player has three pieces. In the initial phase, players take turns placing pieces on empty spots. Once all pieces have been placed, players move their pieces to the connected spots. The player who successfully lines up three pieces wins.',
             style: TextStyle(
               color: Colors.white,
               height: 1.45,
@@ -973,10 +986,10 @@ class _PlayerProfileCard extends StatelessWidget {
           width: 104,
           padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
           decoration: BoxDecoration(
-            color: const Color(0xFF6F3F2B).withOpacity(0.78),
+            color: const Color(0xFF6F3F2B).withValues(alpha: .78),
             borderRadius: BorderRadius.circular(999),
             border: Border.all(
-              color: const Color(0xFFD8A15C).withOpacity(0.55),
+              color: const Color(0xFFD8A15C).withValues(alpha: 0.55),
               width: 1,
             ),
             boxShadow: const [
@@ -1306,6 +1319,7 @@ class _SettingsSquareButtonState extends State<_SettingsSquareButton> {
       onTapCancel: () => _setPressed(false),
       onTap: () {
         HapticFeedback.lightImpact();
+        GameAudio.playClick();
         widget.onTap();
       },
       child: AnimatedScale(
@@ -1372,6 +1386,7 @@ class _SmallRoundButtonState extends State<_SmallRoundButton> {
       onTapCancel: () => _setPressed(false),
       onTap: () {
         HapticFeedback.lightImpact();
+        GameAudio.playClick();
         widget.onTap();
       },
       child: AnimatedScale(
@@ -1438,6 +1453,7 @@ class _DialogButtonState extends State<_DialogButton> {
       onTapCancel: () => _setPressed(false),
       onTap: () {
         HapticFeedback.lightImpact();
+        GameAudio.playClick();
         widget.onTap();
       },
       child: AnimatedScale(
